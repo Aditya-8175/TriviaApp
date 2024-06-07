@@ -1,0 +1,201 @@
+package com.example.triviaapp
+
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonColors
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.triviaapp.module.Trivia
+import com.example.triviaapp.module.getTrivia
+import com.example.triviaapp.ui.theme.TriviaAppTheme
+import dagger.hilt.android.AndroidEntryPoint
+
+
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            TriviaAppTheme {
+
+                val triviaList = getTrivia()
+                var currentQuestionIndex by remember { mutableStateOf(0) }
+                var score by remember { mutableStateOf(0) }
+                var selectedOption by remember { mutableStateOf("") } // Track selected option
+                val context = LocalContext.current
+                QuizScreen(
+                    trivia = triviaList,
+                    currIndex = currentQuestionIndex,
+                    score = score,
+                    SelectedOption = selectedOption,
+                    onNextClick = {
+                        currentQuestionIndex = (currentQuestionIndex + 1) % triviaList.size
+                        selectedOption = "" // Reset selection on next question
+                        val answer = triviaList[currentQuestionIndex].answer
+                        val isCorrect = answer == selectedOption
+                        Toast.makeText(context, "Score is : $score", Toast.LENGTH_SHORT).show()
+
+
+                    },
+                    onOptionSelect = { option ->
+                        selectedOption = option
+                        // Check if selected option matches answer and update score
+                        if (option == triviaList[currentQuestionIndex].answer) {
+                            score++
+                        }
+                    }
+                )
+
+            }
+        }
+    }
+}
+
+@Composable
+fun RadioBtn(
+    opt: String,
+    selected: String = "", // Initially no selection
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+//    colors: RadioButtonColors = RadioButtonDefaults.colors()
+) {
+    Row(
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.padding(4.dp)
+    ) {
+        RadioButton(
+            selected = opt == selected, // Check if option matches selected state
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = Color.Green, // Set your desired color for selected state
+                unselectedColor = Color.LightGray // Set your desired color for unselected state
+            )
+        )
+        Text(text = opt)
+    }
+}
+
+//@Preview(
+//    showBackground = true, showSystemUi = true
+//)
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun QuizScreen(
+    modifier: Modifier = Modifier, trivia: List<Trivia> = getTrivia(),
+    currIndex: Int = 0, score: Int = 0, onOptionSelect: (String) -> Unit = {},
+    SelectedOption: String = "",
+    onNextClick: () -> Unit = {},
+) {
+
+    var currTrivia = trivia[currIndex]
+
+    Column(
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(modifier = Modifier.height(100.dp))
+        // que
+        Surface(
+            modifier = Modifier
+                .padding(16.dp)
+                .height(50.dp)
+                .fillMaxWidth(),
+            shadowElevation = 12.dp,
+            shape = RectangleShape,
+            border = BorderStroke(
+                1.dp,
+                Color.LightGray
+            )
+        ) {
+            Text(
+                text = currTrivia.question,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth(),
+                overflow = TextOverflow.Clip,
+                softWrap = true,
+                fontSize = 11.sp, fontWeight = FontWeight.Bold
+            )
+        }
+
+        Surface(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            shadowElevation = 12.dp,
+            shape = RectangleShape,
+            border = BorderStroke(
+                1.dp,
+                Color.LightGray
+            )
+        ) {
+            Column() {
+
+                Column() {
+                    // Ensure we iterate only up to 4 options
+                    currTrivia.options.take(4).forEach { option ->
+                        RadioBtn(
+                            opt = option,
+                            selected = (SelectedOption == option).toString(), // Check if option matches selected state
+                            onClick = {
+                                onOptionSelect(option) // Pass selected option on click
+                            }
+                        )
+                    }
+                }
+
+
+            }
+
+        }
+        FilledTonalButton(
+            onClick = onNextClick, shape = RoundedCornerShape(corner = CornerSize(12.dp)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = "Next")
+        }
+
+    }
+
+}
+
+
+
